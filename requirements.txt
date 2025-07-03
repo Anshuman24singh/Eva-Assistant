@@ -12,4 +12,7 @@ pydub
 soundfile
 sounddevice
 streamlit-lottie
+<<<<<<< HEAD
 langchain-openai
+=======
+>>>>>>> 42d6da8 (Initial clean commit)

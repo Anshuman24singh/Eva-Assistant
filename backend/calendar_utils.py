@@ -2,8 +2,12 @@ import datetime
 import os
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+<<<<<<< HEAD
 import streamlit as st
 import json
+=======
+
+>>>>>>> 42d6da8 (Initial clean commit)
 # Load credentials from the service account file
 SERVICE_ACCOUNT_FILE = os.path.join(os.path.dirname(__file__), '../creds/service_account.json')
 SCOPES = ['https://www.googleapis.com/auth/calendar']
@@ -14,9 +18,12 @@ credentials = service_account.Credentials.from_service_account_file(
 )
 service = build('calendar', 'v3', credentials=credentials)
 
+<<<<<<< HEAD
 # Load credentials from Streamlit secrets
 service_account_info = st.secrets["google"]
 credentials = service_account.Credentials.from_service_account_info(service_account_info)
+=======
+>>>>>>> 42d6da8 (Initial clean commit)
 
 def get_availability(start_time: datetime.datetime, end_time: datetime.datetime):
     """Returns busy slots from Google Calendar between start_time and end_time"""
