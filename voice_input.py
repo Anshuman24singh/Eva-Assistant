@@ -1,29 +1,32 @@
-import warnings
-warnings.filterwarnings("ignore", category=UserWarning, message="FP16 is not supported on CPU")
-import sounddevice as sd
-import soundfile as sf
-import speech_recognition as sr
+import os
 
+def is_streamlit_cloud():
+    return os.environ.get("STREAMLIT_SERVER_HEADLESS") == "1" or "STREAMLIT_ENV" in os.environ
+
+# Default fallback if voice input isn't available
 def get_voice_command():
-    duration = 5
-    filename = "voice_input.wav"
-    samplerate = 44100
+    print("[🎙️ Voice input disabled on cloud]")
+    return ""
 
-    print("🎙️ Listening...")
-    recording = sd.rec(int(duration * samplerate), samplerate=samplerate, channels=1)
-    sd.wait()
-    sf.write(filename, recording, samplerate)
-    print("✅ Audio saved to voice_input.wav")
-
-    recognizer = sr.Recognizer()
-    with sr.AudioFile(filename) as source:
-        audio = recognizer.record(source)
-
+if not is_streamlit_cloud():
     try:
-        text = recognizer.recognize_google(audio)
-        print("✅ You said:", text)
-        return text
-    except:
-        print("❌ Could not understand audio.")
-        return None
+        import sounddevice as sd
+        import speech_recognition as sr
 
+        def get_voice_command():
+            recognizer = sr.Recognizer()
+            with sr.Microphone() as source:
+                print("🎙️ Listening...")
+                audio = recognizer.listen(source)
+
+            try:
+                command = recognizer.recognize_google(audio)
+                print("You said:", command)
+                return command
+            except sr.UnknownValueError:
+                print("Google Speech Recognition could not understand audio.")
+            except sr.RequestError as e:
+                print(f"Could not request results from Google Speech Recognition service; {e}")
+            return ""
+    except Exception as e:
+        print(f"[⚠️ Voice input unavailable: {e}]")
