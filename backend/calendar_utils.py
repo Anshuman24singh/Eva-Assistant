@@ -13,8 +13,8 @@ SERVICE_ACCOUNT_FILE = os.path.join(os.path.dirname(__file__), '../creds/service
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 CALENDAR_ID = "anshumansinghs044@gmail.com"
 
-credentials = service_account.Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_FILE, scopes=SCOPES
+credentials = service_account.Credentials.from_service_account_info(
+    st.secrets["google"], scopes=SCOPES
 )
 service = build('calendar', 'v3', credentials=credentials)
 
