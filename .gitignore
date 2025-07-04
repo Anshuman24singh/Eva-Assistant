@@ -1,9 +1,7 @@
-<<<<<<< HEAD
+
 .env
 token.json
 .streamlit/chat_memory.pkl
 creds/service_account.json
 .streamlit/secrets.toml
-=======
-creds/service_account.json 
->>>>>>> 42d6da8 (Initial clean commit)
+
