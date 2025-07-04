@@ -3,13 +3,16 @@
 
 Eva-Assistant is a voice-activated AI assistant built with Streamlit, OpenAI, and Google Calendar integration. It can speak, listen, and help you manage tasks with a natural conversational interface.
 
-![Eva Screenshot](https://img.shields.io/badge/AI%20Assistant-Online-blue?style=flat&logo=streamlit)
+# Eva-Assistant 🤖🧵
 
-## 🚀 Try it now
+**AI voice assistant tailored for fashion & productivity.**
 
-👉 **[Click here to launch Eva-Assistant on Streamlit Cloud](https://eva-assistant.streamlit.app)**
+👉 [Click here to launch Eva-Assistant](https://eva-assistant-xi6cme5pdkhbuzswqv6cvu.streamlit.app)
 
-## 🔧 Features
+---
+
+Built using Python · Streamlit · LangChain · Whisper · Google Calendar API
+
 
 - 🎤 Voice input (when running locally)
 - 🗣️ Text-to-Speech (TTS) output (locally)
