@@ -12,3 +12,4 @@ pydub
 soundfile
 sounddevice
 streamlit-lottie
+langchain-openai
