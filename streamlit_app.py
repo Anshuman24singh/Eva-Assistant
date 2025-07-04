@@ -3,7 +3,7 @@ import os
 import pickle
 import json
 from agent.agent import ask_agent
-from speak import speak  # New browser-based speak
+from speak import speak
 from voice_input import get_voice_command
 from streamlit_lottie import st_lottie
 
