@@ -8,30 +8,35 @@ from backend.calendar_utils import book_event, get_availability
 import dateparser
 import streamlit as st
 
-# Load environment variables
+# Load environment variables from .env
 load_dotenv()
 
-# Load OpenRouter API key from secrets or .env
-openrouter_key = st.secrets.get("OPENROUTER_API_KEY", None) or os.getenv("OPENROUTER_API_KEY")
+# Load OpenRouter API key (first check secrets, then fallback to .env)
+openrouter_key = None
+try:
+    openrouter_key = st.secrets["OPENROUTER_API_KEY"]
+except Exception:
+    openrouter_key = os.getenv("OPENROUTER_API_KEY")
 
-# Log to help debugging (don’t show real key)
-print("🔑 Loaded OpenRouter key?", bool(openrouter_key))
+# Debug logging — do not print the key
+print("🔑 OpenRouter key loaded?", bool(openrouter_key))
 
-# Fail gracefully if missing
 if not openrouter_key:
     raise RuntimeError(
-        "❌ OPENROUTER_API_KEY is not set. Add it to `.env` or `.streamlit/secrets.toml`."
+        "❌ OPENROUTER_API_KEY not set. Add it to `.env` or `.streamlit/secrets.toml`."
     )
 
-# Setup OpenRouter LLM
+# Set OpenRouter config for LangChain
 os.environ["OPENAI_API_KEY"] = openrouter_key
 os.environ["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
 
+# Initialize LLM
 llm = ChatOpenAI(
     model="deepseek/deepseek-chat-v3-0324:free",
     temperature=0.4,
 )
 
+# System prompt
 system_prompt = """
 You are EVA, a smart calendar assistant. Be short, polite, and helpful.
 - Detect if the user wants to book, check availability, or just view schedule.
@@ -54,8 +59,7 @@ last_duration = 30
 last_title = None
 
 def extract_time(text):
-    dt = dateparser.parse(text)
-    return dt
+    return dateparser.parse(text)
 
 def extract_duration(text):
     match = re.search(r"(\d+)\s*(minute|min|hour|hr|h)", text.lower())
@@ -113,8 +117,9 @@ def ask_agent(message: str) -> str:
         if busy:
             return "⛔ You're already booked at that time."
         link = book_event(last_title, last_time, last_duration)
+        # Reset state
         last_intent = last_time = last_duration = last_title = None
-        return f"📅 Event booked: {last_title} — View: {link}"
+        return f"📅 Event booked: {title} — View: {link}"
 
     if last_intent == "book":
         missing = []
