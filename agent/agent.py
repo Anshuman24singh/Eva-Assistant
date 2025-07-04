@@ -6,11 +6,18 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from backend.calendar_utils import book_event, get_availability
 import dateparser
+import streamlit as st
 
 load_dotenv()
 
 # OpenRouter LLM setup
-os.environ["OPENAI_API_KEY"] = os.getenv("OPENROUTER_API_KEY")
+
+# Try secrets first, then fallback to env var
+openrouter_key = st.secrets.get("OPENROUTER_API_KEY", os.getenv("OPENROUTER_API_KEY"))
+if not openrouter_key:
+    raise ValueError("❌ OPENROUTER_API_KEY not set in secrets or .env")
+
+os.environ["OPENAI_API_KEY"] = openrouter_key
 os.environ["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
 
 llm = ChatOpenAI(
