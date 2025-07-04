@@ -1,37 +1,24 @@
-
 import re
 import threading
-import streamlit.components.v1 as components
+import os
 
-def speak(text: str, language="en-US", gender="female", rate=1.0, pitch=1.0, volume=1.0):
-    components.html(f"""
-    <script>
-    const speak = () => {{
-        const msg = new SpeechSynthesisUtterance({text!r});
-        msg.lang = "{language}";
-        msg.rate = {rate};
-        msg.pitch = {pitch};
-        msg.volume = {volume};
+# Detect if running on Streamlit Cloud or in headless mode
+def is_streamlit_cloud():
+    return os.environ.get("STREAMLIT_SERVER_HEADLESS") == "1" or "STREAMLIT_ENV" in os.environ
 
-        const voices = window.speechSynthesis.getVoices();
-        const preferredGender = "{gender}".toLowerCase();
+# Default fallback speak function
+def speak(text):
+    print(f"[🔇 Speech fallback] {text}")
 
-        // Try to match based on name or gender (simplified heuristic)
-        msg.voice = voices.find(v => 
-            v.lang === "{language}" &&
-            (preferredGender === "female" ? /female|woman/i.test(v.name) : /male|man/i.test(v.name))
-        ) || voices.find(v => v.lang === "{language}");
+# Try enabling text-to-speech if not on cloud
+try:
+    if not is_streamlit_cloud():
+        import pyttsx3
+        engine = pyttsx3.init()
+        engine.setProperty("rate", 165)
 
-        window.speechSynthesis.cancel();  // Stop anything currently speaking
-        window.speechSynthesis.speak(msg);
-    }}
-
-    // Wait for voices to load
-    if (speechSynthesis.onvoiceschanged !== undefined) {{
-        speechSynthesis.onvoiceschanged = speak;
-    }} else {{
-        speak();
-    }}
-    </script>
-    """, height=0)
-
+        def speak(text):
+            engine.say(text)
+            engine.runAndWait()
+except Exception as e:
+    print(f"[⚠️ TTS disabled due to error: {e}]")
