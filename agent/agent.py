@@ -8,16 +8,22 @@ from backend.calendar_utils import book_event, get_availability
 import dateparser
 import streamlit as st
 
-# Load .env (for local dev) and handle missing keys robustly
+# Load environment variables
 load_dotenv()
 
-# --- ✅ Load API Key Securely ---
-openrouter_key = st.secrets.get("OPENROUTER_API_KEY") or os.getenv("OPENROUTER_API_KEY")
+# Load OpenRouter API key from secrets or .env
+openrouter_key = st.secrets.get("OPENROUTER_API_KEY", None) or os.getenv("OPENROUTER_API_KEY")
 
+# Log to help debugging (don’t show real key)
+print("🔑 Loaded OpenRouter key?", bool(openrouter_key))
+
+# Fail gracefully if missing
 if not openrouter_key:
-    raise ValueError("❌ OPENROUTER_API_KEY not set in Streamlit secrets or .env")
+    raise RuntimeError(
+        "❌ OPENROUTER_API_KEY is not set. Add it to `.env` or `.streamlit/secrets.toml`."
+    )
 
-# --- ✅ OpenRouter LLM Setup ---
+# Setup OpenRouter LLM
 os.environ["OPENAI_API_KEY"] = openrouter_key
 os.environ["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
 
@@ -26,10 +32,8 @@ llm = ChatOpenAI(
     temperature=0.4,
 )
 
-# --- 📘 Prompt Template ---
 system_prompt = """
 You are EVA, a smart calendar assistant. Be short, polite, and helpful.
-
 - Detect if the user wants to book, check availability, or just view schedule.
 - Use natural time parsing (e.g., "tomorrow at 10am", "next Friday", etc).
 - If any detail is missing (title, time, or duration), ask for it simply.
@@ -43,15 +47,15 @@ prompt = ChatPromptTemplate.from_messages([
 
 chain = prompt | llm
 
-# --- 🧠 Memory State ---
+# Memory state
 last_intent = None
 last_time = None
 last_duration = 30
 last_title = None
 
-# --- 🔍 Utility Extractors ---
 def extract_time(text):
-    return dateparser.parse(text)
+    dt = dateparser.parse(text)
+    return dt
 
 def extract_duration(text):
     match = re.search(r"(\d+)\s*(minute|min|hour|hr|h)", text.lower())
@@ -69,7 +73,6 @@ def extract_title(text):
     text = re.sub(r'\s+', ' ', text).strip()
     return text.capitalize() if text else "Event"
 
-# --- 🤖 Core Agent Logic ---
 def ask_agent(message: str) -> str:
     global last_intent, last_time, last_duration, last_title
 
@@ -80,10 +83,12 @@ def ask_agent(message: str) -> str:
         return "Goodbye! Take care."
 
     dt = extract_time(message)
-    if dt: last_time = dt
+    if dt:
+        last_time = dt
 
     dur = extract_duration(message)
-    if dur: last_duration = dur
+    if dur:
+        last_duration = dur
 
     title = extract_title(message)
     if title and title.lower() not in ["event", "reminder"]:
@@ -109,7 +114,7 @@ def ask_agent(message: str) -> str:
             return "⛔ You're already booked at that time."
         link = book_event(last_title, last_time, last_duration)
         last_intent = last_time = last_duration = last_title = None
-        return f"📅 Event booked: {title} — View: {link}"
+        return f"📅 Event booked: {last_title} — View: {link}"
 
     if last_intent == "book":
         missing = []
