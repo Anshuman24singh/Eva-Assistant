@@ -13,3 +13,4 @@ pydub
 soundfile
 sounddevice
 streamlit-lottie
+dateparser
