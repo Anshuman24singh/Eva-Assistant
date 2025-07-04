@@ -8,23 +8,25 @@ from backend.calendar_utils import book_event, get_availability
 import dateparser
 import streamlit as st
 
+# Load .env (for local dev) and handle missing keys robustly
 load_dotenv()
 
-# OpenRouter LLM setup
+# --- ✅ Load API Key Securely ---
+openrouter_key = st.secrets.get("OPENROUTER_API_KEY") or os.getenv("OPENROUTER_API_KEY")
 
-# Try secrets first, then fallback to env var
-openrouter_key = st.secrets.get("OPENROUTER_API_KEY", os.getenv("OPENROUTER_API_KEY"))
 if not openrouter_key:
-    raise ValueError("❌ OPENROUTER_API_KEY not set in secrets or .env")
+    raise ValueError("❌ OPENROUTER_API_KEY not set in Streamlit secrets or .env")
 
+# --- ✅ OpenRouter LLM Setup ---
 os.environ["OPENAI_API_KEY"] = openrouter_key
 os.environ["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
 
 llm = ChatOpenAI(
-    model="deepseek/deepseek-chat-v3-0324:free",  
+    model="deepseek/deepseek-chat-v3-0324:free",
     temperature=0.4,
 )
 
+# --- 📘 Prompt Template ---
 system_prompt = """
 You are EVA, a smart calendar assistant. Be short, polite, and helpful.
 
@@ -41,15 +43,15 @@ prompt = ChatPromptTemplate.from_messages([
 
 chain = prompt | llm
 
-# State memory
+# --- 🧠 Memory State ---
 last_intent = None
 last_time = None
 last_duration = 30
 last_title = None
 
+# --- 🔍 Utility Extractors ---
 def extract_time(text):
-    dt = dateparser.parse(text)
-    return dt
+    return dateparser.parse(text)
 
 def extract_duration(text):
     match = re.search(r"(\d+)\s*(minute|min|hour|hr|h)", text.lower())
@@ -67,18 +69,16 @@ def extract_title(text):
     text = re.sub(r'\s+', ' ', text).strip()
     return text.capitalize() if text else "Event"
 
-
+# --- 🤖 Core Agent Logic ---
 def ask_agent(message: str) -> str:
     global last_intent, last_time, last_duration, last_title
 
     print(f"🧠 Agent received: {message}")
     lower = message.lower()
 
-    # Step 1: Exit detection
     if lower in ["exit", "quit", "bye"]:
         return "Goodbye! Take care."
 
-    # Step 2: Extract knowns
     dt = extract_time(message)
     if dt: last_time = dt
 
@@ -89,13 +89,11 @@ def ask_agent(message: str) -> str:
     if title and title.lower() not in ["event", "reminder"]:
         last_title = title
 
-    # Step 3: Detect intent
     if "free" in lower or "available" in lower or "check" in lower:
         last_intent = "check"
     elif "book" in lower or "add" in lower or "schedule" in lower or "set" in lower:
         last_intent = "book"
 
-    # Step 4: Fulfill check
     if last_intent == "check" and last_time:
         end = last_time + datetime.timedelta(minutes=last_duration)
         busy = get_availability(last_time, end)
@@ -104,18 +102,15 @@ def ask_agent(message: str) -> str:
         else:
             return f"⛔ You're busy at that time."
 
-    # Step 5: Fulfill book
     if last_intent == "book" and all([last_title, last_time]):
         end = last_time + datetime.timedelta(minutes=last_duration)
         busy = get_availability(last_time, end)
         if busy:
             return "⛔ You're already booked at that time."
         link = book_event(last_title, last_time, last_duration)
-        # Reset memory
         last_intent = last_time = last_duration = last_title = None
-        return f"📅 Event booked: {last_title} — View: {link}"
+        return f"📅 Event booked: {title} — View: {link}"
 
-    # Step 6: Missing info
     if last_intent == "book":
         missing = []
         if not last_title:
@@ -124,7 +119,6 @@ def ask_agent(message: str) -> str:
             missing.append("time")
         return f"📝 Got it! Could you tell me the {' and '.join(missing)}?"
 
-    # Step 7: Fallback to LLM
     try:
         return chain.invoke({"input": message}).content
     except Exception as e:
