@@ -1,5 +1,6 @@
 streamlit
 langchain
+langchain-openai
 openai
 python-dotenv
 google-api-python-client
@@ -12,7 +13,3 @@ pydub
 soundfile
 sounddevice
 streamlit-lottie
-<<<<<<< HEAD
-langchain-openai
-=======
->>>>>>> 42d6da8 (Initial clean commit)
