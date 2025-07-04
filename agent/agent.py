@@ -8,25 +8,28 @@ from backend.calendar_utils import book_event, get_availability
 import dateparser
 import streamlit as st
 
-# Load environment variables from .env
+# Load environment variables
 load_dotenv()
 
-# Load OpenRouter API key (first check secrets, then fallback to .env)
+# Load OpenRouter API key
 openrouter_key = None
 try:
-    openrouter_key = st.secrets["OPENROUTER_API_KEY"]
+    openrouter_key = st.secrets.get("OPENROUTER_API_KEY")
+    if not openrouter_key:
+        raise KeyError("Key missing in st.secrets")
 except Exception:
     openrouter_key = os.getenv("OPENROUTER_API_KEY")
 
-# Debug logging — do not print the key
-print("🔑 OpenRouter key loaded?", bool(openrouter_key))
+# Debug (don't print real key)
+print("🔑 st.secrets keys available:", list(st.secrets.keys()))
+print("🔑 OpenRouter key loaded from env or secrets?", bool(openrouter_key))
 
 if not openrouter_key:
     raise RuntimeError(
-        "❌ OPENROUTER_API_KEY not set. Add it to `.env` or `.streamlit/secrets.toml`."
+        "❌ OPENROUTER_API_KEY not set. Add it to Streamlit Cloud secrets or `.env` locally."
     )
 
-# Set OpenRouter config for LangChain
+# Configure OpenRouter for LangChain
 os.environ["OPENAI_API_KEY"] = openrouter_key
 os.environ["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
 
@@ -36,7 +39,7 @@ llm = ChatOpenAI(
     temperature=0.4,
 )
 
-# System prompt
+# Prompt template
 system_prompt = """
 You are EVA, a smart calendar assistant. Be short, polite, and helpful.
 - Detect if the user wants to book, check availability, or just view schedule.
@@ -52,7 +55,7 @@ prompt = ChatPromptTemplate.from_messages([
 
 chain = prompt | llm
 
-# Memory state
+# Global memory state
 last_intent = None
 last_time = None
 last_duration = 30
@@ -118,8 +121,9 @@ def ask_agent(message: str) -> str:
             return "⛔ You're already booked at that time."
         link = book_event(last_title, last_time, last_duration)
         # Reset state
+        response = f"📅 Event booked: {last_title} — View: {link}"
         last_intent = last_time = last_duration = last_title = None
-        return f"📅 Event booked: {title} — View: {link}"
+        return response
 
     if last_intent == "book":
         missing = []
@@ -132,4 +136,4 @@ def ask_agent(message: str) -> str:
     try:
         return chain.invoke({"input": message}).content
     except Exception as e:
-        return f"❌ Error: {e}"
+        return f"❌ Error from assistant: {e}"
